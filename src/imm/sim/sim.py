@@ -103,13 +103,16 @@ def main():
     sim.start()
 
     sim.reset()
+    import pdb;pdb.set_trace()
     pb.startStateLogging(
                 pb.STATE_LOGGING_VIDEO_MP4, '/tmp/imm-sim.mp4')
+
     for i in range(256):
         data = sim.step()
         # NOTE(ycho): For debugging sensors...
         if False:
             print(data)
+        """
         pb.resetDebugVisualizerCamera(cameraDistance=7.0, cameraYaw=i*180/128,
                 cameraPitch=-50,
                 cameraTargetPosition=(0,0,0))
@@ -121,8 +124,11 @@ def main():
             # RGBA -> BGRA
             cv2.imshow('color', color_image[..., [2, 1, 0, 3]])
             cv2.waitKey(1)
+        """
 
         # time.sleep(0.1)
+
+    import pdb;pdb.set_trace()
 
 
 if __name__ == '__main__':
