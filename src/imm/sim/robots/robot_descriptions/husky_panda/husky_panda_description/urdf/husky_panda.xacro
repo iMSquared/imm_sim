@@ -1,0 +1,74 @@
+<?xml version="1.0"?>
+<robot name="husky_panda" xmlns:xacro="http://ros.org/wiki/xacro">
+  
+  <xacro:include filename="$(find husky_description)/urdf/husky.urdf.xacro"/>
+
+  <!-- add mount joint -->
+
+  <joint name="franka_mount_joint" type="fixed">
+    <parent link="base_link" /> 
+     <child link="franka_mount_link" />
+     <origin xyz="$(optenv HUSKY_FRANKA_XYZ 0.309278 0 0.265325)" rpy="$(optenv HUSKY_FRANKA_RPY 0 0 0)"/>
+  </joint>
+
+  <!--<link name="franka_mount_link" />-->
+  <xacro:include filename="$(find franka_gazebo)/robots/panda_arm.xacro"/>
+  <xacro:include filename="$(find franka_gazebo)/robots/hand.xacro"/>
+  <xacro:panda_arm connected_to="franka_mount_link"/>
+  <xacro:hand ns="panda" rpy="0 0 ${-pi/4}" connected_to="panda_link8"/>
+
+
+  <!-- add husky_plate-->
+  
+  <joint name="base_link_to_plate" type="fixed">
+    <parent link="base_link" /> 
+     <child link="plate" />
+     <origin xyz="$(optenv HUSKY_FRANKA_XYZ 0.082697 0 0.244325)" rpy="$(optenv HUSKY_FRANKA_RPY 0 0 0)"/>
+  </joint>  
+
+  <link name="plate">
+    <inertial>
+      <mass value="2.168" />
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <inertia ixx="0.5519" ixy="-1.361e-05" ixz="4.963e-04" iyy="0.4625" iyz="-1.280e-05" izz="0.09187" />
+    </inertial>
+    <visual>
+    <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://husky_panda_description/meshes/husky_panda_gazebo_plate.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </visual>
+    <collision>
+      <origin xyz="0 0 0" rpy="0 0 0" />
+      <geometry>
+        <mesh filename="package://husky_panda_description/meshes/husky_panda_gazebo_plate.stl" scale="0.001 0.001 0.001"/>
+      </geometry>
+    </collision>
+  </link> 
+  
+  <!-- add vlp-16-->
+ 
+ <xacro:include filename="$(find velodyne_description)/urdf/VLP-16.urdf.xacro"/>
+ <VLP-16 parent="base_link" name="velodyne" topic="/velodyne_points" hz="10" samples="440" gpu="false">
+    <origin xyz="-0.216894 0 1.008325" rpy="0 0 0" />
+ </VLP-16>
+  
+  <gazebo>
+    <plugin name="gazebo_grasp_plugin" filename="libgazebo_grasp_fix.so">
+       <arm>
+          <arm_name>husky_panda</arm_name>
+          <gripper_link>panda_leftfinger</gripper_link>
+          <gripper_link>panda_rightfinger</gripper_link>
+          <palm_link>panda_link7</palm_link>
+       </arm>
+       <forces_angle_tolerance>100</forces_angle_tolerance>
+       <update_rate>4</update_rate>
+       <grip_count_threshold>4</grip_count_threshold>
+       <max_grip_count>10</max_grip_count>
+       <release_tolerance>0.0005</release_tolerance>
+       <disable_collisions_on_attach>false</disable_collisions_on_attach>
+       <contact_topic>__default_topic__</contact_topic>
+    </plugin>
+  </gazebo> 
+
+</robot>

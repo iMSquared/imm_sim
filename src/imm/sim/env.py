@@ -20,6 +20,8 @@ class PlaneEnvironment(EnvironmentBase):
         self.plane_index = -1
 
     def reset(self, sim_id: int):
+        # (bkim) Should we be resetting the objects to their original poses rather than creating them?
+        #   Perhaps I misunderstood the implication of "reset"
         # Add ground plane.
         plane_shape = pb.createCollisionShape(
             pb.GEOM_PLANE, physicsClientId=sim_id)
