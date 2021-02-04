@@ -105,3 +105,37 @@ class SphereTreeRobot(RobotBase):
     @property
     def robot_id(self):
         return self.robot_id_
+
+
+@dataclass
+class UrdfRobotSettings:
+    filename: str
+    position: Tuple[float, float, float]
+
+
+class UrdfRobot(RobotBase):
+    def __init__(self, settings: UrdfRobotSettings):
+        self.sim_id_ = -1
+        self.robot_id_ = -1
+        self.settings_ = settings
+
+    def reset(self, sim_id: int):
+        settings = self.settings_
+        self.sim_id_ = sim_id
+        self.robot_id_ = pb.loadURDF(
+            settings.filename, useFixedBase=False,
+            flags=pb.URDF_USE_INERTIA_FROM_FILE,
+            physicsClientId=self.sim_id)
+
+        pb.resetBasePositionAndOrientation(self.robot_id,
+                                           settings.position, [
+                                               0, 0, 0, 1],
+                                           physicsClientId=self.sim_id)
+
+    @property
+    def sim_id(self):
+        return self.sim_id_
+
+    @property
+    def robot_id(self):
+        return self.robot_id_
