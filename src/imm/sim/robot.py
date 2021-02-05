@@ -122,10 +122,13 @@ class UrdfRobot(RobotBase):
     def reset(self, sim_id: int):
         settings = self.settings_
         self.sim_id_ = sim_id
+
+        # pb.configureDebugVisualizer(pb.COV_ENABLE_RENDERING, 0)
         self.robot_id_ = pb.loadURDF(
             settings.filename, useFixedBase=False,
             flags=pb.URDF_USE_INERTIA_FROM_FILE,
             physicsClientId=self.sim_id)
+        # pb.configureDebugVisualizer(pb.COV_ENABLE_RENDERING, 1)
 
         pb.resetBasePositionAndOrientation(self.robot_id,
                                            settings.position, [

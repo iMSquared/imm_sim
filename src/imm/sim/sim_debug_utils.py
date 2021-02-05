@@ -4,6 +4,49 @@ from typing import List
 import pybullet as pb
 import numpy as np
 import math
+import itertools
+
+
+def debug_get_full_aabb(sim_id: int, robot_id: int):
+    """
+    Get full AABB of a robot including all of its constituent links.
+    """
+    num_joints = pb.getNumJoints(robot_id, physicsClientId=sim_id)
+    aabb = np.asarray(pb.getAABB(
+        robot_id, -1, physicsClientId=sim_id), dtype=np.float32)
+    for i in range(num_joints):
+        link_aabb = pb.getAABB(robot_id, i, physicsClientId=sim_id)
+        aabb[0] = np.minimum(aabb[0], link_aabb[0], out=aabb[0])
+        aabb[1] = np.maximum(aabb[1], link_aabb[1], out=aabb[1])
+    return aabb
+
+
+def debug_draw_bounding_box(sim_id: int, robot_id: int):
+    # Get full AABB in world coordinates.
+    aabb = debug_get_full_aabb(sim_id, robot_id)
+
+    # World coord -> Base coord
+    bp, bq = pb.getBasePositionAndOrientation(robot_id, physicsClientId=sim_id)
+    R = np.reshape(pb.getMatrixFromQuaternion(bq), (3, 3))
+    aabb = (aabb - R.T @ bp) @ R
+
+    # Draw box (TODO(ycho): Optimize!)
+    for i0 in itertools.product([0, 1], repeat=3):
+        for i1 in itertools.product([0, 1], repeat=3):
+            if np.equal(i0, i1).sum() != 2:
+                continue
+            c = np.cross(i0, i1)
+            # u = 0.5 * np.add(p0, p1)
+            # if c.dot(u) < 0:
+            # continue
+            # p0 = np.asarray(i0)
+            # p1 = np.asarray(i1, dtype=np.int32)
+            p0 = aabb[i0, [0, 1, 2]]
+            p1 = aabb[i1, [0, 1, 2]]
+            pb.addUserDebugLine(p0, p1, [0, 0, 1],
+                                parentObjectUniqueId=robot_id,
+                                physicsClientId=sim_id)
+
 
 def debug_draw_frame_axes(sim_id: int, robot_id: int, scale: float = 1.0, joint_indices: List[int] = None):
     """
@@ -123,5 +166,3 @@ def debug_draw_inertia_box(parentUid, parentLinkIndex, color):
                            1,
                            parentObjectUniqueId=parentUid,
                            parentLinkIndex=parentLinkIndex)
-
-

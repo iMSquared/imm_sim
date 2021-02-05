@@ -7,7 +7,7 @@ import time
 import importlib
 import numpy as np
 import pkg_resources
-
+import logging
 import pybullet as pb
 
 # from imm.sim.env import PlaneEnvironment, Box2DEnvironment, Box2DEnvironmentSettings, SampleGibsonEnvironment
@@ -15,7 +15,7 @@ from imm.sim.env import ThreeDFrontEnvironment, ThreeDFrontEnvironmentSettings
 from imm.sim.robot import SphereRobot, SphereTreeRobot, SphereTreeRobotSettings, UrdfRobotSettings, UrdfRobot
 from imm.sim.sensor import SensorBase, JointStateSensor, BasePoseSensor, ImageSensor
 from imm.sim.sensor import ImageSettings
-from imm.sim.sim_debug_utils import debug_draw_inertia_box, debug_draw_frame_axes
+from imm.sim.sim_debug_utils import debug_draw_inertia_box, debug_draw_frame_axes, debug_draw_bounding_box
 
 
 @dataclass
@@ -38,11 +38,12 @@ class Simulator(object):
         # self.env_ = PlaneEnvironment()
         # self.env_ = SampleGibsonEnvironment()
         self.env_ = ThreeDFrontEnvironment(
-                ThreeDFrontEnvironmentSettings(
-                    model_dir='/media/ssd/datasets/3DFRONT/3D-FUTURE-model/3D-FUTURE-model/',
-                    scene_dir='/media/ssd/datasets/3DFRONT/3D-FRONT/'
-                    ))
-
+            ThreeDFrontEnvironmentSettings(
+                model_dir='/media/ssd/datasets/3DFRONT/3D-FUTURE-model/3D-FUTURE-model/',
+                scene_dir='/media/ssd/datasets/3DFRONT/3D-FRONT/',
+                scene_file='/media/ssd/datasets/3DFRONT/3D-FRONT/4b41ef33-c496-455c-b8f2-aa32d5152878.json'
+                # scene_file='/media/ssd/datasets/3DFRONT/3D-FRONT/b7efb4f9-33a9-4b2b-acf4-574b8d2a6f18.json'
+            ))
 
         # robot
         # FIXME(ycho): Should load from settings instead of hardcoding.
@@ -90,20 +91,27 @@ class Simulator(object):
         self.sim_id_ = sim_id
 
     def reset(self):
-        pb.resetSimulation(physicsClientId=self.sim_id)
         settings = self.settings_
 
-        # Configure simulation.
+        # Hard-reset simulation.
+        pb.resetSimulation(physicsClientId=self.sim_id)
+
+        # Reconfigure simulation.
         pb.setGravity(0, 0, settings.gravity, physicsClientId=self.sim_id)
         pb.setTimeStep(settings.timestep, physicsClientId=self.sim_id)
         pb.setRealTimeSimulation(False, physicsClientId=self.sim_id)
-        pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 0)
+        pb.configureDebugVisualizer(pb.COV_ENABLE_GUI, 1)
 
         # Reset environment and agents.
         self.env_.reset(self.sim_id)
         self.robot_.reset(self.sim_id)
         for _, sensor in self.sensors_.items():
             sensor.reset(self.sim_id, self.robot_.robot_id)
+
+        # Delegate robot positioning to the env in order to find a collision-free initial position.
+        # TODO(ycho): Figure out the optimal architecture for this.
+        # TODO(ycho): Unsupported API from EnvBase, only ThreeDFrontEnvironment.
+        self.env_.place(self.robot_.robot_id)
 
         # Add debugging handlers.
         if True:
@@ -117,6 +125,9 @@ class Simulator(object):
                 debug_draw_inertia_box(
                     self.robot_.robot_id, i, color=(0, 0, 1))
 
+            debug_draw_bounding_box(self.sim_id, self.robot_.robot_id)
+            # debug_draw_bounding_box(self.sim_id, self.env_.env_ids_[0])
+
     def step(self):
         out = pb.stepSimulation(physicsClientId=self.sim_id)
         return self.sense()
@@ -127,6 +138,7 @@ class Simulator(object):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO)
     settings = SimulatorSettings()
     sim = Simulator(settings)
     sim.start()
